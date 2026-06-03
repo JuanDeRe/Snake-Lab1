@@ -68,6 +68,12 @@ co.eci.snake
 
 ---
 
+## Solución Parte I
+
+Se modificó el programa PrimeFinder para que cada t milisegundos (dados por el usuario), todos los hilos de la clase PrimeFinderThread se pausen y impriman todos los numeros primos que han encontrado hasta el momento. 
+
+Para esto se creó la clase Timer. Esta se corre como otro hilo, al mismo tiempo que los hilos para buscar primos, que va contando el tiempo hasta que pasen t milisegundos. Cuando pasa el tiempo requerido, invoca el método de pauseThread, el cual es Synchronized y usa wait(), además cambia la bandera paused a true, esta bandera se usa en el ciclo dentro de run(). Luego Timer le dice a cada hilo que imprima cuantos primos lleva, y luego invoca el método resumeThread que usa notify() y es Synchronized, además cambia la bandera paused a false.
+
 ## Parte II — SnakeRace concurrente (núcleo del laboratorio)
 
 ### 1) Análisis de concurrencia
@@ -101,6 +107,10 @@ co.eci.snake
 > Entregables detallados más abajo.
 
 ---
+
+## Solución Parte II
+
+
 
 ## Entregables
 
