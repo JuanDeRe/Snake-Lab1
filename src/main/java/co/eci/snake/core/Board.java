@@ -11,7 +11,7 @@ public final class Board {
   private final Set<Position> obstacles = new HashSet<>();
   private final Set<Position> turbo = new HashSet<>();
   private final Map<Position, Position> teleports = new HashMap<>();
-  private List<Snake> snakes;
+  private List<Snake> snakes = new ArrayList<>();
 
   public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED, HIT_SNAKE }
 
@@ -32,7 +32,9 @@ public final class Board {
   public synchronized Set<Position> obstacles() { return new HashSet<>(obstacles); }
   public synchronized Set<Position> turbo() { return new HashSet<>(turbo); }
   public synchronized Map<Position, Position> teleports() { return new HashMap<>(teleports); }
-  public void setSnakes(List<Snake> snakes){ this.snakes = snakes; }
+  public void setSnakes(List<Snake> snakes){
+    this.snakes = new ArrayList<>(snakes);
+  }
 
   public synchronized MoveResult step(Snake snake) {
     Objects.requireNonNull(snake, "snake");

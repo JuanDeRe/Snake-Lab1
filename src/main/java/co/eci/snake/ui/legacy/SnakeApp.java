@@ -63,7 +63,7 @@
       pack();
       setLocationRelativeTo(null);
 
-      this.clock = new GameClock(40, () -> SwingUtilities.invokeLater(gamePanel::repaint));
+      this.clock = new GameClock(10, () -> SwingUtilities.invokeLater(gamePanel::repaint));
 
       var exec = Executors.newVirtualThreadPerTaskExecutor();
       snakes.forEach(s -> exec.submit(new SnakeRunner(s, board, pauseController)));
@@ -148,7 +148,10 @@
 
     private void togglePause() {
       if ("Pause".equals(actionButton.getText())) {
-        pauseController.requestPause(snakes.size());
+        int aliveCount = (int) snakes.stream()
+                .filter(Snake::isAlive)
+                .count();
+        pauseController.requestPause(aliveCount);
         snakes.forEach(Snake::pause);
         actionButton.setText("Resume");
         clock.pause();

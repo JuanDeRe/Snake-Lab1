@@ -28,7 +28,7 @@ public final class Snake {
 
   public synchronized Direction direction() { return direction; }
 
-  public void turn(Direction dir) {
+  public synchronized void turn(Direction dir) {
     if (isDead || paused || (direction == Direction.UP && dir == Direction.DOWN) ||
         (direction == Direction.DOWN && dir == Direction.UP) ||
         (direction == Direction.LEFT && dir == Direction.RIGHT) ||
@@ -59,7 +59,7 @@ public final class Snake {
     notifyAll();
   }
 
-  public boolean isBot() {
+  public synchronized boolean isBot() {
     return isBot;
   }
 
@@ -67,7 +67,7 @@ public final class Snake {
     return !isDead;
   }
 
-  public long timeAlive(){
+  public synchronized long timeAlive(){
     return timeAlive;
   }
 
