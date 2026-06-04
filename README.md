@@ -110,7 +110,50 @@ Para esto se creó la clase Timer. Esta se corre como otro hilo, al mismo tiempo
 
 ## Solución Parte II
 
+1) Análisis de concurrencia:
 
+El código usa hilos en la clase SnakeRunner, al hacer que esta extienda de la interfaz Runnable. Esta clase crea una serpiente y le asigna un tablero que es compartido para todas las serpientes. 
+Ya que el tablero es compartido, es necesario que los métodos dentro del tablero que lo modifican sean sincronizados para que dos serpientes no editen algo al mismo tiempo o una interactúe con algo que ya no está.
+
+Dentro de la clase Board se tienen los atributos mice, obstacles y turbo que son HashSets y teleports que es un HashMap. Estas colecciones no son seguras por sí solas en un contexto recurrente.
+Sin embargo, para leer estos atributos del objeto, hay que usar los métodos mice(), obstacles(), turbo() y teleports(), los cuales son métodos sincronizados y devuelven una copia del atributo. Esto ayuda a que 
+no se lea mientras se está modificando.
+
+Por otra parte, la clase Snake, no extiende Thread ni Runnable, pero si podría llegar a ser leida o modificada por más de un hilo a la vez si queremos implementar colisiones entre serpientes por ejemplo. Por lo que 
+deberia protegerse ante un contexto concurrente. Primeramente, el atributo body, es de tipo ArrayDeque, el cual no está protegido contra la recurrencia, y los metodos para leer este atributo tampoco usan sincronización.
+La clase GamePanel lee directamente la serpiente con snapshot() que no está protegido, lo que puede hacer que se muestre una cosa mientras que realmente otras clases como Board están modificando el estado de la serpiente.
+
+Por último en la clase SnakeRunner, en el método run, en la última línea del ciclo se hace un Thread.sleep(), lo cual se detecta como un posible caso de 
+busy waiting, sin embargo, en este caso se usa para establecer la velocidad en la que se van a actualizar la posición de las serpientes, lo cual es útil en este caso
+para que el juego sea más fácil de jugar.
+
+2) Correcciones mínimas y regiones críticas
+
+En la clase Snake se cambiaron los métodos direction(), turn(), head(), snapshot() y advance() para que fueran sincronizados. Esto se hizo porque body usa un ArrayDeque, que no es seguro en un entorno concurrente. 
+No se cambió la estructura porque el problema no era solamente el tipo de colección, sino que varios hilos podían leer o modificarla al mismo tiempo. Por eso se protegieron los métodos que acceden a ella.
+
+Con esto se evita que, por ejemplo, la UI haga un snapshot() mientras un SnakeRunner está ejecutando advance(), lo que podría generar lecturas inconsistentes.
+
+También se revisó Board. Aunque usa colecciones como HashSet y HashMap, sus métodos públicos ya estaban sincronizados y devuelven copias, por lo que no se expone directamente el estado interno. Además, step() está sincronizado, 
+lo cual es necesario porque modifica el tablero compartido.
+
+Adicionalmente, se implementó una pausa real para los SnakeRunner. Antes solo se pausaba el GameClock, entonces la UI dejaba de renderizar, pero las serpientes seguían moviéndose internamente. Ahora cada serpiente tiene un estado paused, 
+y el SnakeRunner llama a waitIfPaused() al inicio de su ciclo. Si la serpiente está pausada, el hilo hace wait() y queda bloqueado sin hacer espera activa. Cuando se llama a resume(), se cambia paused a false y se usa notifyAll() para continuar.
+
+3) Control de ejecución seguro UI
+
+Se modificó el control de la UI para manejar iniciar, pausar y reanudar el juego. La pausa ya no afecta solo al renderizado, sino también a los hilos que mueven las serpientes.
+
+Como la suspensión no es instantánea, se agregó un PauseController para coordinar el momento en que todos los SnakeRunner ya llegaron a un punto seguro. Esto es importante porque al presionar pausa algún hilo podría estar todavía dentro de 
+board.step(snake) o esperando en el Thread.sleep().
+
+Cuando se pausa, la UI llama a requestPause(snakes.size()). Luego cada SnakeRunner, al llegar a la revisión de pausa, avisa que ya está detenido. La UI espera con awaitAllPaused() hasta que todos hayan confirmado. Esta espera se hace en un 
+hilo aparte para no bloquear la interfaz de Swing.
+
+Después de que todos los runners están pausados, se actualiza la UI con SwingUtilities.invokeLater(). En ese momento se calcula la serpiente viva más larga usando max() y la peor serpiente usando min() sobre las serpientes que ya murieron. 
+La información se muestra en un JLabel en la parte inferior de la ventana.
+
+Con esto se reduce el riesgo de tearing, es decir, que la UI muestre datos mezclados de momentos diferentes del juego. Ahora los datos se leen cuando los hilos ya no están modificando el estado.
 
 ## Entregables
 

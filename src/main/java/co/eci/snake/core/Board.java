@@ -1,10 +1,6 @@
 package co.eci.snake.core;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public final class Board {
@@ -15,8 +11,9 @@ public final class Board {
   private final Set<Position> obstacles = new HashSet<>();
   private final Set<Position> turbo = new HashSet<>();
   private final Map<Position, Position> teleports = new HashMap<>();
+  private List<Snake> snakes;
 
-  public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED }
+  public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED, HIT_SNAKE }
 
   public Board(int width, int height) {
     if (width <= 0 || height <= 0) throw new IllegalArgumentException("Board dimensions must be positive");
@@ -35,6 +32,7 @@ public final class Board {
   public synchronized Set<Position> obstacles() { return new HashSet<>(obstacles); }
   public synchronized Set<Position> turbo() { return new HashSet<>(turbo); }
   public synchronized Map<Position, Position> teleports() { return new HashMap<>(teleports); }
+  public void setSnakes(List<Snake> snakes){ this.snakes = snakes; }
 
   public synchronized MoveResult step(Snake snake) {
     Objects.requireNonNull(snake, "snake");
@@ -48,6 +46,10 @@ public final class Board {
     if (teleports.containsKey(next)) {
       next = teleports.get(next);
       teleported = true;
+    }
+
+    if (checkSnakeCollision(snake, next)) {
+      return MoveResult.HIT_SNAKE;
     }
 
     boolean ateMouse = mice.remove(next);
@@ -65,6 +67,12 @@ public final class Board {
     if (ateMouse) return MoveResult.ATE_MOUSE;
     if (teleported) return MoveResult.TELEPORTED;
     return MoveResult.MOVED;
+  }
+
+  private boolean checkSnakeCollision(Snake movingSnake, Position next) {
+    return snakes.stream()
+            .filter(Snake::isAlive)
+            .anyMatch(s -> s.snapshot().contains(next));
   }
 
   private void createTeleportPairs(int pairs) {
